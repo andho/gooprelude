@@ -1,5 +1,3 @@
-use std::{fmt::Debug, hash::Hash};
-
 use bevy::{
     input::Input,
     math::{Vec2, Vec3},
@@ -60,7 +58,9 @@ pub struct MovementPlugin;
 
 impl Plugin for MovementPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(player_controller.in_set(OnUpdate(GameState::InGame)))
-            .add_system(player_movement.in_set(OnUpdate(GameState::InGame)));
+        app.add_systems(
+            Update,
+            ( player_controller, player_movement ).run_if(in_state(GameState::InGame))
+        );
     }
 }

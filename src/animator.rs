@@ -3,7 +3,7 @@ use std::{fmt::Display, hash::Hash};
 use bevy::{
     core::Name,
     hierarchy::Children,
-    prelude::{info, Commands, Component, Entity, Handle, Query, With},
+    prelude::{Commands, Component, Entity, Handle, Query, With},
     sprite::TextureAtlasSprite,
     utils::HashMap,
 };

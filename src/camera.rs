@@ -33,6 +33,6 @@ pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_system(camera_movement.in_set(OnUpdate(GameState::InGame)));
+        app.add_systems(Update, camera_movement.run_if(in_state(GameState::InGame)));
     }
 }

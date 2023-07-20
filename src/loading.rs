@@ -1,13 +1,13 @@
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
-use iyes_progress::{Progress, ProgressCounter, ProgressPlugin, ProgressSystem};
+use iyes_progress::ProgressPlugin;
 
 #[derive(AssetCollection, Resource)]
-struct GameAssets {
+pub struct GameAssets {
     #[asset(path = "character/character-sheet.png")]
-    player_spritesheet: Handle<Image>,
+    pub player_spritesheet: Handle<Image>,
     #[asset(path = "background/campsite-improved.png")]
-    background_texture: Handle<Image>,
+    pub background_texture: Handle<Image>,
 }
 
 #[derive(Default)]
@@ -30,13 +30,14 @@ impl<State> LoadingPlugin<State> {
 impl<State: Sync + Send + States> Plugin for LoadingPlugin<State> {
     fn build(&self, app: &mut App) {
         app
+            .init_collection::<GameAssets>()
             .insert_resource(ProgressTimer(Timer::from_seconds(0.5, TimerMode::Repeating)))
             .add_loading_state(LoadingState::new(self.loading.clone()))
             .add_collection_to_loading_state::<_, GameAssets>(self.loading.clone())
-            .add_plugin(ProgressPlugin::new(self.loading.clone()).continue_to(self.next.clone()))
-            .add_system(loading_screen_setup.in_schedule(OnEnter(self.loading.clone())))
-            .add_system(cleanup_loading.in_schedule(OnExit(self.loading.clone())))
-            .add_system(print_progress.in_set(OnUpdate(self.loading.clone())));
+            .add_plugins(ProgressPlugin::new(self.loading.clone()).continue_to(self.next.clone()))
+            .add_systems(OnEnter(self.loading.clone()), loading_screen_setup)
+            .add_systems(OnExit(self.loading.clone()), cleanup_loading)
+            .add_systems(Update, print_progress.run_if(in_state(self.loading.clone())));
     }
 }
 

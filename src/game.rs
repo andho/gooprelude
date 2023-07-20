@@ -1,6 +1,6 @@
 use bevy::{prelude::*, utils::HashMap};
 
-use crate::{loading::LoadingPlugin, mouse::MousePlugin, input::{MovementPlugin, Velocity}, camera::CameraPlugin, animator::{AnimationKey, Animator, animation_selection}, animation::{SpriteSheetAnimation, AnimationPlugin}};
+use crate::{loading::{LoadingPlugin, GameAssets}, mouse::MousePlugin, input::{MovementPlugin, Velocity}, camera::CameraPlugin, animator::{AnimationKey, Animator, animation_selection}, animation::{SpriteSheetAnimation, AnimationPlugin}};
 
 use std::{f32::consts::TAU, fmt::{Display, Formatter, Result}};
 
@@ -24,17 +24,20 @@ impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app
             .add_state::<GameState>()
-            .add_plugin(LoadingPlugin::new(GameState::Loading, GameState::InGame))
-            .add_plugin(MousePlugin)
-            .add_plugin(MovementPlugin)
-            .add_plugin(CameraPlugin)
-            .add_plugin(AnimationPlugin)
-            .add_system(setup_background.in_schedule(OnEnter(GameState::InGame)))
-            .add_system(setup_player.in_schedule(OnEnter(GameState::InGame)))
-            .add_system(
-                animation_selection::<Animations, AnimationData>.in_set(OnUpdate(GameState::InGame)),
+            .add_plugins((
+                LoadingPlugin::new(GameState::Loading, GameState::InGame),
+                MousePlugin,
+                MovementPlugin,
+                CameraPlugin,
+                AnimationPlugin,
+            ))
+            .add_systems(OnEnter(GameState::InGame), setup_background)
+            .add_systems(OnEnter(GameState::InGame), setup_player)
+            .add_systems(
+                Update,
+                animation_selection::<Animations, AnimationData>.run_if(in_state(GameState::InGame)),
             )
-            .add_system(update_animation_data.in_set(OnUpdate(GameState::InGame)));
+            .add_systems(Update, update_animation_data.run_if(in_state(GameState::InGame)));
     }
 }
 
@@ -67,15 +70,13 @@ fn animation_selector(data: AnimationData) -> Animations {
 
 fn setup_player(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    asset_server: Res<AssetServer>,
+    game_assets: Res<GameAssets>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut animations: ResMut<Assets<SpriteSheetAnimation>>,
 ) {
     commands.spawn(Camera2dBundle::default());
 
-    let texture_handle = asset_server.load("character/character-sheet.png");
+    let texture_handle = game_assets.player_spritesheet.clone();
     let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(64.0, 64.0), 11, 1, None, None);
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 

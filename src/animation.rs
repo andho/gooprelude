@@ -1,13 +1,13 @@
-use std::{fmt::Debug, hash::Hash};
+use std::{fmt::Debug};
 
 use bevy::prelude::*;
-use bevy::reflect::TypeUuid;
+use bevy::reflect::{TypeUuid, TypePath};
 use bevy::sprite::TextureAtlasSprite;
 use std::ops::DerefMut;
 
 use crate::game::GameState;
 
-#[derive(Debug, Clone, TypeUuid)]
+#[derive(Debug, Clone, TypeUuid, TypePath)]
 #[uuid = "14069b02-588b-4fdf-be17-60d158301129"]
 pub struct SpriteSheetAnimation {
     frames: Vec<usize>,
@@ -108,7 +108,6 @@ pub fn animate(
         &mut SpriteSheetAnimationState,
     )>,
 ) {
-    info!("Trying to add animate");
     for (sprite, animation, mut state) in
         animations
             .iter_mut()
@@ -128,11 +127,12 @@ pub struct AnimationPlugin;
 impl Plugin for AnimationPlugin {
     fn build(&self, app: &mut App) {
         app.add_asset::<SpriteSheetAnimation>()
-            .add_system(
-                add_animation_state
-                    .in_set(OnUpdate(GameState::InGame))
-                    .before(animate),
-            )
-            .add_system(animate.in_set(OnUpdate(GameState::InGame)));
+            .add_systems(
+                Update,
+                (
+                    add_animation_state,
+                    animate.after(add_animation_state),
+                ).run_if(in_state(GameState::InGame))
+            );
     }
 }
