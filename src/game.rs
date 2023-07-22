@@ -1,6 +1,6 @@
 use bevy::{prelude::*, utils::HashMap};
 
-use crate::{loading::{LoadingPlugin, GameAssets}, mouse::MousePlugin, input::{MovementPlugin, Velocity}, camera::CameraPlugin, animator::{AnimationKey, Animator, animation_selection}, animation::{SpriteSheetAnimation, AnimationPlugin}};
+use crate::{loading::{LoadingPlugin, GameAssets}, mouse::MousePlugin, input::{MovementPlugin, Velocity}, camera::CameraPlugin, animator::{AnimationKey, Animator, animation_selection}, animation::{SpriteSheetAnimation, AnimationPlugin}, vision_cone::vision_cone_gizmo};
 
 use std::{f32::consts::TAU, fmt::{Display, Formatter, Result}};
 
@@ -37,7 +37,10 @@ impl Plugin for GamePlugin {
                 Update,
                 animation_selection::<Animations, AnimationData>.run_if(in_state(GameState::InGame)),
             )
-            .add_systems(Update, update_animation_data.run_if(in_state(GameState::InGame)));
+            .add_systems(Update, (
+                update_animation_data,
+                vision_cone_gizmo,
+            ).run_if(in_state(GameState::InGame)));
     }
 }
 

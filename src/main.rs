@@ -5,6 +5,7 @@ mod input;
 mod camera;
 mod animation;
 mod animator;
+mod vision_cone;
 
 use bevy::prelude::*;
 use game::GamePlugin;
