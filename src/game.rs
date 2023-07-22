@@ -105,6 +105,7 @@ fn setup_player(
             Transform::from_translation(Vec3::splat(1.)),
         ))
         .insert(Player)
+        .insert(Name::new("Player Entity"))
         .insert(animator)
         .insert(AnimationData::default())
         .with_children(|parent| {
