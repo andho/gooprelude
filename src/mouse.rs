@@ -5,11 +5,11 @@ use bevy::{
     prelude::*,
 };
 
-use crate::game::{Player, GameState};
+use crate::game::{Player, GameState, MainCamera};
 
 fn mouse_look(
     windows: Query<&Window>,
-    cam_query: Query<(&Camera, &GlobalTransform)>,
+    cam_query: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     mut transform_query: Query<&mut Transform, With<Player>>,
 ) {
     (|| {

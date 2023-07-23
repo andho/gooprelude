@@ -6,6 +6,7 @@ mod camera;
 mod animation;
 mod animator;
 mod vision_cone;
+mod post_processing;
 
 use bevy::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;

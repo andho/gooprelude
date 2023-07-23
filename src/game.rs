@@ -1,6 +1,6 @@
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{prelude::*, utils::HashMap, core_pipeline::clear_color::ClearColorConfig};
 
-use crate::{loading::{LoadingPlugin, GameAssets}, mouse::MousePlugin, input::{MovementPlugin, Velocity}, camera::CameraPlugin, animator::{AnimationKey, Animator, animation_selection}, animation::{SpriteSheetAnimation, AnimationPlugin}, vision_cone::vision_cone_gizmo};
+use crate::{loading::{LoadingPlugin, GameAssets}, mouse::MousePlugin, input::{MovementPlugin, Velocity}, camera::CameraPlugin, animator::{AnimationKey, Animator, animation_selection}, animation::{SpriteSheetAnimation, AnimationPlugin}, vision_cone::VisionConePlugin, post_processing::{PostProcessPlugin, PostProcessSettings}};
 
 use std::{f32::consts::TAU, fmt::{Display, Formatter, Result}};
 
@@ -25,21 +25,23 @@ impl Plugin for GamePlugin {
         app
             .add_state::<GameState>()
             .add_plugins((
+                PostProcessPlugin,
                 LoadingPlugin::new(GameState::Loading, GameState::InGame),
                 MousePlugin,
                 MovementPlugin,
                 CameraPlugin,
                 AnimationPlugin,
+                VisionConePlugin,
             ))
-            .add_systems(OnEnter(GameState::InGame), setup_background)
-            .add_systems(OnEnter(GameState::InGame), setup_player)
-            .add_systems(
-                Update,
-                animation_selection::<Animations, AnimationData>.run_if(in_state(GameState::InGame)),
+            .add_systems(OnEnter(GameState::InGame),
+                (
+                    setup_background,
+                    setup_player,
+                ).chain()
             )
             .add_systems(Update, (
                 update_animation_data,
-                vision_cone_gizmo,
+                animation_selection::<Animations, AnimationData>,
             ).run_if(in_state(GameState::InGame)));
     }
 }
@@ -64,6 +66,9 @@ struct AnimationData {
     moving: bool,
 }
 
+#[derive(Component)]
+pub struct MainCamera;
+
 fn animation_selector(data: AnimationData) -> Animations {
     match data.moving {
         true => Animations::Walk,
@@ -71,13 +76,22 @@ fn animation_selector(data: AnimationData) -> Animations {
     }
 }
 
-fn setup_player(
+pub fn setup_player(
     mut commands: Commands,
     game_assets: Res<GameAssets>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut animations: ResMut<Assets<SpriteSheetAnimation>>,
 ) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((
+        Camera2dBundle {
+            camera_2d: Camera2d {
+                clear_color: ClearColorConfig::Custom(Color::WHITE),
+            },
+            ..default()
+        },
+        MainCamera,
+        PostProcessSettings { intensity: 0.0 },
+    ));
 
     let texture_handle = game_assets.player_spritesheet.clone();
     let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(64.0, 64.0), 11, 1, None, None);
@@ -123,11 +137,14 @@ fn setup_background(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
-    commands.spawn(SpriteBundle {
-        texture: asset_server.load("background/campsite-improved.png"),
-        transform: Transform::from_scale(Vec3::splat(0.5)),
-        ..Default::default()
-    });
+    commands.spawn((
+        SpriteBundle {
+            texture: asset_server.load("background/campsite-improved.png"),
+            transform: Transform::from_scale(Vec3::splat(0.5)),
+            ..Default::default()
+        },
+        Name::new("bg"),
+    ));
 }
 
 fn update_animation_data(mut query: Query<(&Velocity, &mut AnimationData)>) {
