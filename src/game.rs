@@ -1,6 +1,6 @@
 use bevy::{prelude::*, utils::HashMap, core_pipeline::clear_color::ClearColorConfig};
 
-use crate::{loading::{LoadingPlugin, GameAssets}, mouse::MousePlugin, input::{MovementPlugin, Velocity}, camera::CameraPlugin, animator::{AnimationKey, Animator, animation_selection}, animation::{SpriteSheetAnimation, AnimationPlugin}, vision_cone::VisionConePlugin, post_processing::{PostProcessPlugin, PostProcessSettings}};
+use crate::{loading::{LoadingPlugin, GameAssets}, mouse::MousePlugin, input::{MovementPlugin, Velocity}, camera::CameraPlugin, animator::{AnimationKey, Animator, animation_selection}, animation::{SpriteSheetAnimation, AnimationPlugin}, field_of_view::{FovMarker, FieldOfViewPlugin}, };
 
 use std::{f32::consts::TAU, fmt::{Display, Formatter, Result}};
 
@@ -25,13 +25,12 @@ impl Plugin for GamePlugin {
         app
             .add_state::<GameState>()
             .add_plugins((
-                PostProcessPlugin,
                 LoadingPlugin::new(GameState::Loading, GameState::InGame),
                 MousePlugin,
                 MovementPlugin,
                 CameraPlugin,
                 AnimationPlugin,
-                VisionConePlugin,
+                FieldOfViewPlugin,
             ))
             .add_systems(OnEnter(GameState::InGame),
                 (
@@ -90,7 +89,7 @@ pub fn setup_player(
             ..default()
         },
         MainCamera,
-        PostProcessSettings { intensity: 0.0 },
+        FovMarker,
     ));
 
     let texture_handle = game_assets.player_spritesheet.clone();
