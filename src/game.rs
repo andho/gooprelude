@@ -1,6 +1,6 @@
 use bevy::{prelude::*, utils::HashMap, core_pipeline::clear_color::ClearColorConfig};
 
-use crate::{loading::{LoadingPlugin, GameAssets}, mouse::MousePlugin, input::{MovementPlugin, Velocity}, camera::CameraPlugin, animator::{AnimationKey, Animator, animation_selection}, animation::{SpriteSheetAnimation, AnimationPlugin}, field_of_view::{FovMarker, FieldOfViewPlugin}, };
+use crate::{loading::{LoadingPlugin, GameAssets}, mouse::MousePlugin, input::{MovementPlugin, Velocity}, camera::CameraPlugin, animator::{AnimationKey, Animator, animation_selection}, animation::{SpriteSheetAnimation, AnimationPlugin}, field_of_view::{FovMarker, FieldOfViewPlugin}, scene::setup_scene, };
 
 use std::{f32::consts::TAU, fmt::{Display, Formatter, Result}};
 
@@ -36,6 +36,7 @@ impl Plugin for GamePlugin {
                 (
                     setup_background,
                     setup_player,
+                    setup_scene,
                 ).chain()
             )
             .add_systems(Update, (

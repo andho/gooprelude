@@ -6,6 +6,7 @@ mod camera;
 mod animation;
 mod animator;
 mod field_of_view;
+mod scene;
 
 use bevy::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;

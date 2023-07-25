@@ -8,6 +8,10 @@ pub struct GameAssets {
     pub player_spritesheet: Handle<Image>,
     #[asset(path = "background/campsite-improved.png")]
     pub background_texture: Handle<Image>,
+    #[asset(path = "textures/stationary/tent.png")]
+    pub tent_texture: Handle<Image>,
+    #[asset(path = "textures/stationary/sitting-log.png")]
+    pub sitting_log_texture: Handle<Image>,
 }
 
 #[derive(Default)]
