@@ -11,6 +11,7 @@ fn mouse_look(
     windows: Query<&Window>,
     cam_query: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     mut transform_query: Query<&mut Transform, With<Player>>,
+    time: Res<Time>,
 ) {
     (|| {
         let wnd = windows.single();
@@ -29,7 +30,8 @@ fn mouse_look(
         let new_rotation = Quat::from_rotation_arc_2d(a, b).normalize();
 
         let old_rotation = transform.rotation;
-        transform.rotation = old_rotation.lerp(new_rotation, 0.2);
+        transform.rotation = old_rotation.lerp(new_rotation, 1. - f32::powf(0.002, time.delta_seconds()));
+        //transform.rotation = new_rotation;
 
         Some(())
     })();
