@@ -10,6 +10,7 @@ mod scene;
 
 use bevy::{prelude::*, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, window::{PresentMode, WindowTheme}};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_rapier2d::{prelude::{RapierPhysicsPlugin, NoUserData}, render::RapierDebugRenderPlugin};
 use game::GamePlugin;
 
 fn main() {
@@ -24,10 +25,14 @@ fn main() {
                 }),
                 ..default()
             }),
+            RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0),
+            RapierDebugRenderPlugin::default(),
             GamePlugin,
-            FrameTimeDiagnosticsPlugin,
+        ))
+        .add_plugins((
+            WorldInspectorPlugin::new(),
+            //FrameTimeDiagnosticsPlugin,
             LogDiagnosticsPlugin::default(),
         ))
-        .add_plugins(WorldInspectorPlugin::new())
         .run();
 }

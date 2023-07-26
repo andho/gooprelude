@@ -35,8 +35,8 @@ impl Plugin for GamePlugin {
             .add_systems(OnEnter(GameState::InGame),
                 (
                     setup_background,
-                    setup_player,
                     setup_scene,
+                    setup_player,
                 ).chain()
             )
             .add_systems(Update, (
@@ -85,7 +85,7 @@ pub fn setup_player(
     commands.spawn((
         Camera2dBundle {
             camera_2d: Camera2d {
-                clear_color: ClearColorConfig::Custom(Color::WHITE),
+                clear_color: ClearColorConfig::Custom(Color::GRAY),
             },
             ..default()
         },

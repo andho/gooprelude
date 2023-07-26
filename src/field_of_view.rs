@@ -20,25 +20,58 @@ use bevy::{
         renderer::{RenderContext, RenderDevice},
         texture::BevyDefault,
         view::{ExtractedView, ViewTarget, RenderLayers},
-        RenderApp, extract_resource::{ExtractResource, ExtractResourcePlugin}, camera::RenderTarget, render_asset::RenderAssets, mesh::Indices,
+        RenderApp, extract_resource::{ExtractResource, ExtractResourcePlugin}, camera::RenderTarget, render_asset::RenderAssets, mesh::{Indices, VertexFormatSize},
     },
-    sprite::MaterialMesh2dBundle,
+    sprite::{MaterialMesh2dBundle, Mesh2dHandle}, window::WindowResized,
 };
+use bevy_rapier2d::prelude::{RapierContext, QueryFilter};
 
-use crate::game::{GameState, setup_player, Player};
+use crate::{game::{GameState, setup_player, Player}, scene::setup_scene};
 
 #[derive(Resource, Clone, Deref, ExtractResource)]
 struct FieldOfViewImage(Handle<Image>);
 
+fn window_resized_update_texture_size(
+    windows: Query<&Window>,
+    mut events: EventReader<WindowResized>,
+    fov_image: Res<FieldOfViewImage>,
+    mut images: ResMut<Assets<Image>>,
+) {
+    for _event in events.iter() {
+        let wnd = windows.single();
+
+        let size = Extent3d {
+            width: wnd.width() as u32,
+            height: wnd.height() as u32,
+            ..default()
+        };
+
+        let Some(image) = images.get_mut(&fov_image.0) else {
+            return;
+        };
+
+        image.resize(size);
+    }
+}
+
 fn vision_cone_texture_setup(
+    windows: Query<&Window>,
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
 ) {
+    let wnd = windows.single();
+
     let size = Extent3d {
-        width: 1280,
-        height: 720,
+        width: wnd.width() as u32,
+        height: wnd.height() as u32,
         ..default()
     };
+
+    //let size = Extent3d {
+    //    width: 1280,
+    //    height: 720,
+    //    ..default()
+    //};
 
     let mut image = Image {
         texture_descriptor: TextureDescriptor {
@@ -66,7 +99,11 @@ fn vision_cone_texture_setup(
 #[derive(Component, Default, Clone, Copy, ExtractComponent)]
 pub struct FovMarker;
 
+const FOV_VIEW_DISTANCE: f32 = 500.;
 const FOV_INTENSITY: f32 = 0.8;
+const FOV_ANGLE: f32 = 1.2;
+const FOV_STEPS: u32 = 1000;
+const FOV_VERTEX_COUNT: usize = 1001;
 
 fn camera_setup(
     mut commands: Commands,
@@ -107,13 +144,7 @@ fn fov_mesh_setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    // This specifies the layer used for the first pass, which will be attached to the first pass camera and cube.
-    let first_pass_layer = RenderLayers::layer(1);
-
-    let fov_angle = 1.2;
-    let view_distance = 500.;
-    let steps = 32_u32;
-    let increment = (fov_angle * 2.) / steps as f32;
+    let increment = (FOV_ANGLE * 2.) / FOV_STEPS as f32;
 
     let Ok((entity, transform)) = query.get_single() else {
         return;
@@ -122,17 +153,18 @@ fn fov_mesh_setup(
     let mut fov_mesh = Mesh::new(PrimitiveTopology::TriangleList);
 
     let mut angle_sweeper = transform.clone();
-    angle_sweeper.rotate_z(fov_angle);
+    angle_sweeper.rotate_z(FOV_ANGLE + increment);
 
-    let uvs: Vec<[f32; 2]> = vec![[1., 1.]; 34];
-    let normals: Vec<[f32; 3]> = vec![[0., 0., 1.]; 34];
-    let mut v_pos = vec![[0.0, 0.0, 1.0]];
-    let vertex = angle_sweeper.right().truncate() * view_distance;
-    v_pos.push([vertex.x, vertex.y, 0.]);
+    let origin = transform.translation.truncate();
 
-    for _step in 0..steps {
+    let uvs: Vec<[f32; 2]> = vec![[1., 1.]; FOV_VERTEX_COUNT];
+    let normals: Vec<[f32; 3]> = vec![[0., 0., 1.]; FOV_VERTEX_COUNT];
+    let mut v_pos = vec![[0., 0., 1.0]];
+
+    for _step in 0..FOV_STEPS {
         angle_sweeper.rotate_z(-increment);
-        let vertex = angle_sweeper.right().truncate() * view_distance;
+        let vertex_direction = angle_sweeper.right().truncate();
+        let vertex =  vertex_direction * FOV_VIEW_DISTANCE;
         v_pos.push([vertex.x, vertex.y, 1.]);
     }
 
@@ -141,24 +173,138 @@ fn fov_mesh_setup(
     fov_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
 
     let mut indices = vec![];
-    for i in 1..steps {
+    for i in 1..FOV_STEPS {
         indices.extend_from_slice(&[0, i, i + 1]);
     }
     fov_mesh.set_indices(Some(Indices::U32(indices)));
 
-    commands.entity(entity).with_children(|parent| {
-        parent.spawn((
-        //commands.spawn((
-            MaterialMesh2dBundle {
-                mesh: meshes.add(fov_mesh).into(),
-                material: materials.add(ColorMaterial::from(Color::rgba(1., 1., 1., 1.))),
-                transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
-                ..default()
-            },
-            Name::new("fov"),
-            first_pass_layer,
-        ));
-    });
+    let first_pass_layer = RenderLayers::layer(1);
+    commands.spawn((
+        MaterialMesh2dBundle {
+            mesh: meshes.add(fov_mesh).into(),
+            material: materials.add(ColorMaterial::from(Color::rgba(1., 1., 1., 1.))),
+            transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
+            ..default()
+        },
+        Name::new("fov"),
+        first_pass_layer,
+        FovMesh,
+    ));
+}
+
+fn fov_mesh_update(
+    query: Query<&Transform, (With<Player>, Without<FovMesh>)>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut mesh_handle: Query<(&Mesh2dHandle, &mut Transform), (With<FovMesh>, Without<Player>)>,
+    rapier_context: Res<RapierContext>,
+    mut gizmos: Gizmos,
+) {
+    let Ok((mesh_handle, mut mesh_transform)) = mesh_handle.get_single_mut() else {
+        return;
+    };
+
+    let increment = (FOV_ANGLE * 2.) / FOV_STEPS as f32;
+
+    let Ok(transform) = query.get_single() else {
+        return;
+    };
+
+    let origin = transform.translation.truncate();
+    let mut angle_sweeper = transform.clone();
+    angle_sweeper.rotate_z(FOV_ANGLE + increment);
+
+    let mut fov_mesh = Mesh::new(PrimitiveTopology::TriangleList);
+
+    let uvs: Vec<[f32; 2]> = vec![[1., 1.]; FOV_VERTEX_COUNT];
+    let normals: Vec<[f32; 3]> = vec![[0., 0., 1.]; FOV_VERTEX_COUNT];
+    let mut v_pos = vec![[0., 0., 1.0]];
+
+    for _step in 0..FOV_STEPS {
+        angle_sweeper.rotate_z(-increment);
+        let vertex_direction = angle_sweeper.right().truncate().normalize();
+        let hit_point;
+
+        if let Some((_entity, toi)) = rapier_context.cast_ray(
+                origin,
+                vertex_direction.normalize(),
+                FOV_VIEW_DISTANCE,
+                true,
+                QueryFilter::default(),
+        ) {
+            hit_point = vertex_direction * toi;
+        } else {
+            hit_point =  vertex_direction * FOV_VIEW_DISTANCE;
+        }
+
+        //gizmos.line_2d(
+        //    origin,
+        //    origin + hit_point,
+        //    Color::GREEN
+        //);
+        v_pos.push([hit_point.x, hit_point.y, 1.]);
+    }
+
+    fov_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, v_pos);
+    fov_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+    fov_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+
+    let mut indices = vec![];
+    for i in 1..FOV_STEPS {
+        indices.extend_from_slice(&[0, i, i + 1]);
+    }
+    fov_mesh.set_indices(Some(Indices::U32(indices)));
+
+    mesh_transform.translation = transform.translation;
+    if let Some(mesh) = meshes.get_mut(&mesh_handle.0) {
+        *mesh = fov_mesh;
+    }
+}
+
+#[derive(Component)]
+struct FovMesh;
+
+
+pub fn vision_cone_gizmo(
+    mut gizmos: Gizmos,
+    query: Query<&Transform, With<Player>>,
+    rapier_context: Res<RapierContext>,
+) {
+    if let Ok(transform) = query.get_single() {
+        if let Some((_entity, toi)) = rapier_context.cast_ray(
+            transform.translation.truncate(),
+            transform.right().truncate().normalize(),
+            500.,
+            false,
+            QueryFilter::default(),
+        ) {
+            gizmos.ray_2d(
+                transform.translation.truncate(),
+                transform.right().truncate().normalize() * toi,
+                Color::GREEN
+            );
+        } else {
+            gizmos.ray_2d(
+                transform.translation.truncate(),
+                transform.right().truncate() * 500.,
+                Color::GREEN
+            );
+        }
+
+        let mut ccw_transform = transform.clone();
+        ccw_transform.rotate_z(FOV_ANGLE);
+        let mut cw_transform = transform.clone();
+        cw_transform.rotate_z(-FOV_ANGLE);
+        gizmos.ray_2d(
+            transform.translation.truncate(),
+            ccw_transform.right().truncate() * 500.,
+            Color::GREEN
+        );
+        gizmos.ray_2d(
+            transform.translation.truncate(),
+            cw_transform.right().truncate() * 500.,
+            Color::GREEN
+        );
+    }
 }
 
 pub struct FieldOfViewPlugin;
@@ -175,7 +321,12 @@ impl Plugin for FieldOfViewPlugin {
                 apply_deferred,
                 camera_setup.after(vision_cone_texture_setup),
                 fov_mesh_setup.after(setup_player),
-            ).chain());
+            ).chain())
+            .add_systems(Update, (
+                window_resized_update_texture_size,
+                vision_cone_gizmo,
+                fov_mesh_update,
+            ).run_if(in_state(GameState::InGame)));
 
         let Ok(render_app) = app.get_sub_app_mut(RenderApp) else {
             return;
