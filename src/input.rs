@@ -1,8 +1,9 @@
 use bevy::{
     input::Input,
     math::{Vec2, Vec3},
-    prelude::*,
+    prelude::*, gizmos,
 };
+use bevy_rapier2d::prelude::{RapierContext, Collider, QueryFilter};
 
 use crate::game::{Player, GameState};
 
@@ -45,10 +46,50 @@ fn player_controller(
     commands.entity(entity).insert(velocity);
 }
 
-fn player_movement(time: Res<Time>, mut query: Query<(&mut Transform, &Velocity)>) {
+fn player_movement(
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut Transform, &Velocity, Option<&Collider>)>,
+    rapier_context: Res<RapierContext>,
+    mut gizmos: Gizmos,
+) {
     let delta = time.delta_seconds();
-    for (mut transform, velocity) in query.iter_mut() {
-        let final_velocity = velocity.0 * SPEED * delta;
+    for (entity, mut transform, velocity, collider) in query.iter_mut() {
+        let mut final_velocity = velocity.0 * SPEED * delta;
+
+        if let Some(collider) = collider {
+            let horizontal = Vec2::from((final_velocity.x, 0.));
+            let vertical = Vec2::from((0., final_velocity.y));
+            let filter = QueryFilter::new().exclude_collider(entity);
+
+            // horizontal shape cast
+            if let Some((entity, hit)) = rapier_context.cast_shape(
+                transform.translation.truncate(),
+                0.,
+                horizontal,
+                collider,
+                4.,
+                filter,
+            ) {
+                if hit.toi <= 1. {
+                    final_velocity = Vec2::from((0., final_velocity.y));
+                }
+            }
+
+            // vertical shape cast
+            if let Some((entity, hit)) = rapier_context.cast_shape(
+                transform.translation.truncate(),
+                0.,
+                vertical,
+                collider,
+                4.,
+                filter,
+            ) {
+                if hit.toi <= 1. {
+                    final_velocity = Vec2::from((final_velocity.x, 0.));
+                }
+            }
+        }
+
         transform.translation += Vec3::from((final_velocity, 0.0));
     }
 }

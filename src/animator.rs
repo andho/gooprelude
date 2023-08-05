@@ -15,14 +15,14 @@ pub trait AnimationKey: Eq + Hash + Sync + Send + Default + Display {}
 #[derive(Component)]
 pub struct Animator<T: AnimationKey, U> {
     animations: HashMap<T, Handle<SpriteSheetAnimation>>,
-    selector: fn(U) -> T,
+    selector: fn(&U) -> T,
     target: Name,
 }
 
 impl<T: AnimationKey, U> Animator<T, U> {
     pub fn new(
         animations: HashMap<T, Handle<SpriteSheetAnimation>>,
-        selector: fn(U) -> T,
+        selector: fn(&U) -> T,
         target: Name,
     ) -> Self {
         Self {
@@ -32,7 +32,7 @@ impl<T: AnimationKey, U> Animator<T, U> {
         }
     }
 
-    pub fn select(&self, data: U) -> Handle<SpriteSheetAnimation> {
+    pub fn select(&self, data: &U) -> Handle<SpriteSheetAnimation> {
         let animation: T = (self.selector)(data);
 
         self.animations.get(&animation).unwrap().clone_weak()
@@ -49,7 +49,7 @@ pub fn animation_selection<T: AnimationKey + 'static, U: 'static + Component + C
     sprites: Query<&Name, With<TextureAtlasSprite>>,
 ) {
     for (entity, animator, anim_data, children) in animated.iter() {
-        let animation = animator.select(anim_data.clone());
+        let animation = animator.select(anim_data);
         if let Ok(name) = sprites.get(entity) {
             if animator.match_target(name) {
                 commands.entity(entity).insert(animation);

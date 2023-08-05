@@ -1,4 +1,5 @@
 use bevy::{prelude::*, utils::HashMap, core_pipeline::clear_color::ClearColorConfig};
+use bevy_rapier2d::prelude::Collider;
 
 use crate::{loading::{LoadingPlugin, GameAssets}, mouse::MousePlugin, input::{MovementPlugin, Velocity}, camera::CameraPlugin, animator::{AnimationKey, Animator, animation_selection}, animation::{SpriteSheetAnimation, AnimationPlugin}, field_of_view::{FovMarker, FieldOfViewPlugin}, scene::setup_scene, };
 
@@ -69,7 +70,7 @@ struct AnimationData {
 #[derive(Component)]
 pub struct MainCamera;
 
-fn animation_selector(data: AnimationData) -> Animations {
+fn animation_selector(data: &AnimationData) -> Animations {
     match data.moving {
         true => Animations::Walk,
         false => Animations::Idle,
@@ -115,13 +116,16 @@ pub fn setup_player(
     );
 
     commands
-        .spawn(SpatialBundle::from_transform(
-            Transform::from_translation(Vec3::splat(1.)),
+        .spawn((
+            SpatialBundle::from_transform(
+                Transform::from_translation(Vec3::splat(1.)),
+            ),
+            Player,
+            Name::new("Player Entity"),
+            animator,
+            AnimationData::default(),
+            Collider::ball(25.),
         ))
-        .insert(Player)
-        .insert(Name::new("Player Entity"))
-        .insert(animator)
-        .insert(AnimationData::default())
         .with_children(|parent| {
             parent
                 .spawn(SpriteSheetBundle {

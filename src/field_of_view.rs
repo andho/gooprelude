@@ -26,7 +26,7 @@ use bevy::{
 };
 use bevy_rapier2d::prelude::{RapierContext, QueryFilter};
 
-use crate::{game::{GameState, setup_player, Player}, scene::setup_scene};
+use crate::game::{GameState, setup_player, Player};
 
 #[derive(Resource, Clone, Deref, ExtractResource)]
 struct FieldOfViewImage(Handle<Image>);
@@ -193,7 +193,7 @@ fn fov_mesh_setup(
 }
 
 fn fov_mesh_update(
-    query: Query<&Transform, (With<Player>, Without<FovMesh>)>,
+    query: Query<(&Transform, Entity), (With<Player>, Without<FovMesh>)>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut mesh_handle: Query<(&Mesh2dHandle, &mut Transform), (With<FovMesh>, Without<Player>)>,
     rapier_context: Res<RapierContext>,
@@ -205,7 +205,7 @@ fn fov_mesh_update(
 
     let increment = (FOV_ANGLE * 2.) / FOV_STEPS as f32;
 
-    let Ok(transform) = query.get_single() else {
+    let Ok((transform, entity)) = query.get_single() else {
         return;
     };
 
@@ -218,6 +218,7 @@ fn fov_mesh_update(
     let uvs: Vec<[f32; 2]> = vec![[1., 1.]; FOV_VERTEX_COUNT];
     let normals: Vec<[f32; 3]> = vec![[0., 0., 1.]; FOV_VERTEX_COUNT];
     let mut v_pos = vec![[0., 0., 1.0]];
+    let filter = QueryFilter::new().exclude_collider(entity);
 
     for _step in 0..FOV_STEPS {
         angle_sweeper.rotate_z(-increment);
@@ -228,8 +229,8 @@ fn fov_mesh_update(
                 origin,
                 vertex_direction.normalize(),
                 FOV_VIEW_DISTANCE,
-                true,
-                QueryFilter::default(),
+                false,
+                filter,
         ) {
             hit_point = vertex_direction * toi;
         } else {
