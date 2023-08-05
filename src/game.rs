@@ -1,5 +1,5 @@
 use bevy::{prelude::*, utils::HashMap, core_pipeline::clear_color::ClearColorConfig};
-use bevy_rapier2d::prelude::Collider;
+use bevy_rapier2d::prelude::{Collider, KinematicCharacterController};
 
 use crate::{loading::{LoadingPlugin, GameAssets}, mouse::MousePlugin, input::{MovementPlugin, Velocity}, camera::CameraPlugin, animator::{AnimationKey, Animator, animation_selection}, animation::{SpriteSheetAnimation, AnimationPlugin}, field_of_view::{FovMarker, FieldOfViewPlugin}, scene::setup_scene, };
 
@@ -124,7 +124,8 @@ pub fn setup_player(
             Name::new("Player Entity"),
             animator,
             AnimationData::default(),
-            Collider::ball(25.),
+            Collider::ball(15.),
+            KinematicCharacterController::default(),
         ))
         .with_children(|parent| {
             parent
