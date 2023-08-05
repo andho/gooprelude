@@ -1,7 +1,7 @@
 use bevy::{prelude::*, utils::HashMap, core_pipeline::clear_color::ClearColorConfig};
 use bevy_rapier2d::prelude::{Collider, KinematicCharacterController};
 
-use crate::{loading::{LoadingPlugin, GameAssets}, mouse::MousePlugin, input::{MovementPlugin, Velocity}, camera::CameraPlugin, animator::{AnimationKey, Animator, animation_selection}, animation::{SpriteSheetAnimation, AnimationPlugin}, field_of_view::{FovMarker, FieldOfViewPlugin}, scene::setup_scene, };
+use crate::{loading::{LoadingPlugin, GameAssets}, mouse::MousePlugin, input::{MovementPlugin, Velocity}, camera::CameraPlugin, animator::{AnimationKey, Animator, animation_selection}, animation::{SpriteSheetAnimation, AnimationPlugin}, field_of_view::{FovMarker, FieldOfViewPlugin}, scene::setup_scene, inventory::{InventoryPlugin, Inventory}, };
 
 use std::{f32::consts::TAU, fmt::{Display, Formatter, Result}};
 
@@ -32,6 +32,7 @@ impl Plugin for GamePlugin {
                 CameraPlugin,
                 AnimationPlugin,
                 FieldOfViewPlugin,
+                InventoryPlugin,
             ))
             .add_systems(OnEnter(GameState::InGame),
                 (

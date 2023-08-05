@@ -7,6 +7,7 @@ mod animation;
 mod animator;
 mod field_of_view;
 mod scene;
+mod inventory;
 
 use bevy::{prelude::*, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, window::{PresentMode, WindowTheme}};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;

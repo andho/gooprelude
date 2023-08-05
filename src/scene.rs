@@ -1,7 +1,7 @@
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 use bevy_rapier2d::prelude::*;
 
-use crate::loading::GameAssets;
+use crate::{loading::GameAssets, inventory::{ItemOnGround, InventoryItemType, Item}};
 
 pub fn setup_scene(
     mut commands: Commands,
@@ -24,6 +24,8 @@ pub fn setup_scene(
                     Transform::from_xyz(0., 5., 1.)
                     .with_rotation(Quat::from_rotation_z(-0.35))
                 ),
+                CollisionGroups::new(Group::GROUP_1, Group::ALL),
+                //Name::new("Tent collider"),
             ));
         });
 
@@ -37,5 +39,27 @@ pub fn setup_scene(
             ..default()
         },
         Collider::cuboid(25., 25.),
+        CollisionGroups::new(Group::GROUP_1, Group::ALL),
+        //Name::new("Column"),
+    ));
+
+    commands.spawn((
+        MaterialMesh2dBundle {
+            mesh: meshes
+                .add(shape::Quad::new(Vec2::new(50., 50.)).into())
+                .into(),
+            material: materials.add(ColorMaterial::from(Color::LIME_GREEN)),
+            transform: Transform::from_translation(Vec3::new(-50., -50., 1.)),
+            ..default()
+        },
+        ItemOnGround {
+            item: Item {
+                name: "ItemA".into(),
+                item_type: InventoryItemType::Consumable,
+            },
+        },
+        Collider::cuboid(15., 15.),
+        CollisionGroups::new(Group::GROUP_2, Group::ALL),
+        //Name::new("ItemA on ground"),
     ));
 }
